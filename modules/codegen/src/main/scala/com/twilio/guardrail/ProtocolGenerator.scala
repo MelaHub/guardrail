@@ -27,21 +27,22 @@ case class ProtocolDefinitions(elems: List[StrictProtocolElems],
 case class ProtocolParameter(term: Term.Param, name: String, dep: Option[Term.Name], readOnlyKey: Option[String], emptyToNullKey: Option[String])
 
 object ProtocolGenerator {
+
+  val toPascalRegexes = List(
+    "[\\._-]([a-z])".r, // dotted, snake, or dashed case
+    "\\s+([a-zA-Z])".r, // spaces
+    "^([a-z])".r // initial letter
+  )
+
+  def toPascalCase(s: String): String =
+    toPascalRegexes.foldLeft(s)(
+      (accum, regex) => regex.replaceAllIn(accum, m => m.group(1).toUpperCase(Locale.US))
+    )
+
   private[this] def fromEnum[F[_]](clsName: String, swagger: ModelImpl)(implicit E: EnumProtocolTerms[F],
                                                                         F: FrameworkTerms[F]): Free[F, Either[String, ProtocolElems]] = {
     import E._
     import F._
-
-    val toPascalRegexes = List(
-      "[\\._-]([a-z])".r, // dotted, snake, or dashed case
-      "\\s+([a-zA-Z])".r, // spaces
-      "^([a-z])".r // initial letter
-    )
-
-    def toPascalCase(s: String): String =
-      toPascalRegexes.foldLeft(s)(
-        (accum, regex) => regex.replaceAllIn(accum, m => m.group(1).toUpperCase(Locale.US))
-      )
 
     def validProg(enum: List[String], tpe: Type): Free[F, EnumDefinition] = {
       val elems = enum.map { elem =>
@@ -51,11 +52,9 @@ object ProtocolGenerator {
       val pascalValues = elems.map(_._2)
       for {
         members <- renderMembers(clsName, elems)
-        accessors = pascalValues
-          .map({ pascalValue =>
-            q"val ${Pat.Var(pascalValue)}: ${Type.Name(clsName)} = members.${pascalValue}"
-          })
-          .to[List]
+        accessors = pascalValues.map { pascalValue =>
+          q"val ${Pat.Var(pascalValue)}: ${Type.Name(clsName)} = members.$pascalValue"
+        }
         values: Defn.Val = q"val values = Vector(..$pascalValues)"
         encoder <- encodeEnum(clsName)
         decoder <- decodeEnum(clsName)
@@ -104,7 +103,7 @@ object ProtocolGenerator {
       })
       for {
         params <- props.traverse(transformProperty(clsName, needCamelSnakeConversion, concreteTypes) _ tupled)
-        terms = params.map(_.term).to[List]
+        terms = params.map(_.term)
         defn <- renderDTOClass(clsName, terms)
         deps = params.flatMap(_.dep)
         encoder <- encodeModel(clsName, needCamelSnakeConversion, params)
@@ -168,6 +167,14 @@ object ProtocolGenerator {
       elems <- definitions.traverse {
         case (clsName, model) =>
           model match {
+            case comp: ComposedModel =>
+              plainTypeAlias("Trololo")
+//              for {
+//                enum  <- fromEnum(clsName, m)
+//                model <- fromModel(clsName, m, concreteTypes)
+//                alias <- modelTypeAlias(clsName, m)
+//              } yield enum.orElse(model).getOrElse(alias)
+
             case m: ModelImpl =>
               for {
                 enum  <- fromEnum(clsName, m)
@@ -177,13 +184,13 @@ object ProtocolGenerator {
             case arr: ArrayModel =>
               fromArray(clsName, arr, concreteTypes)
             case x =>
-              println(s"Warning: ${x} being treated as Json")
+              println(s"Warning: $x being treated as Json")
               plainTypeAlias(clsName)
           }
       }
-      protoImports      <- protocolImports
-      pkgImports        <- packageObjectImports
-      pkgObjectContents <- packageObjectContents
+      protoImports      <- protocolImports()
+      pkgImports        <- packageObjectImports()
+      pkgObjectContents <- packageObjectContents()
       strictElems = ProtocolElems.resolve(elems).right.get
     } yield ProtocolDefinitions(strictElems, protoImports, pkgImports, pkgObjectContents)
   }

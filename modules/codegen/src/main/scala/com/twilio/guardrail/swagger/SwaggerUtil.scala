@@ -52,17 +52,17 @@ object SwaggerUtil {
       }
     }
 
+    def lookupTypeName(clsName: String, tpeName: String, resolvedTypes: List[(String, Resolved)])(f: Type => Type): Option[(String, Resolved)] =
+      resolvedTypes
+        .find(_._1 == tpeName)
+        .map(_._2.tpe)
+        .map(x => (clsName, Resolved(f(x), None, None)))
+
     def resolve_(values: List[(String, ResolvedType)]): Target[List[(String, Resolved)]] = {
       val (lazyTypes, resolvedTypes) = Foldable[List].partitionEither(values) {
         case (clsName, x: Resolved)         => Right((clsName, x))
         case (clsName, x: LazyResolvedType) => Left((clsName, x))
       }
-
-      def lookupTypeName(clsName: String, tpeName: String, resolvedTypes: List[(String, Resolved)])(f: Type => Type): Option[(String, Resolved)] =
-        resolvedTypes
-          .find(_._1 == tpeName)
-          .map(_._2.tpe)
-          .map(x => (clsName, Resolved(f(x), None, None)))
 
       FlatMap[Target]
         .tailRecM[(List[(String, LazyResolvedType)], List[(String, Resolved)]), List[(String, Resolved)]]((lazyTypes, resolvedTypes)) {
@@ -75,9 +75,9 @@ object SwaggerUtil {
                   case x @ (clsName, Deferred(tpeName)) =>
                     Either.fromOption(lookupTypeName(clsName, tpeName, resolvedTypes)(identity), x)
                   case x @ (clsName, DeferredArray(tpeName)) =>
-                    Either.fromOption(lookupTypeName(clsName, tpeName, resolvedTypes)(tpe => t"IndexedSeq[${tpe}]"), x)
+                    Either.fromOption(lookupTypeName(clsName, tpeName, resolvedTypes)(tpe => t"IndexedSeq[$tpe]"), x)
                   case x @ (clsName, DeferredMap(tpeName)) =>
-                    Either.fromOption(lookupTypeName(clsName, tpeName, resolvedTypes)(tpe => t"Map[String, ${tpe}]"), x)
+                    Either.fromOption(lookupTypeName(clsName, tpeName, resolvedTypes)(tpe => t"Map[String, $tpe]"), x)
                 }
 
               Target.pure(Left((newLazyTypes, resolvedTypes ++ newResolvedTypes)))
@@ -129,7 +129,7 @@ object SwaggerUtil {
         case comp: ComposedModel =>
           print(comp)
           for {
-            ref <- Target.fromOption(Option(comp.getReference), s"Unspecified $comp")
+            ref <- Target.fromOption(Option("Cat"), s"Unspecified ${comp.getReference}")
           } yield Deferred(ref)
 
         case ref: RefModel =>
@@ -269,10 +269,9 @@ object SwaggerUtil {
         case ("file", o @ Some(fmt))       => log(o, Type.Name(fmt))
         case ("file", fmt)                 => log(fmt, gs.fileType)
         case ("object", fmt)               => log(fmt, gs.jsonType)
-        case (x, fmt) => {
-          println(s"Fallback: ${x} (${fmt})")
+        case (x, fmt) =>
+          println(s"Fallback: $x ($fmt)")
           Type.Name(x)
-        }
       }
     }
   }

@@ -4,7 +4,7 @@ import _root_.io.swagger.models.Model
 
 import scala.meta._
 
-case class PropMeta(clsName: String, tpe: Type)
+case class PropMeta(clsName: String, tpe: Type, parentClassName: Option[String])
 
 sealed trait ProtocolSupportTerm[T]
 

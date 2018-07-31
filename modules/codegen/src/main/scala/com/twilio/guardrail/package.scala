@@ -19,7 +19,8 @@ package guardrail {
   case class CodegenDefinitions(clients: List[Client], servers: List[Server])
 
   object Target {
-    val A                              = Applicative[Target]
+    val A: Applicative[Target] = Applicative[Target]
+
     def pure[T](x: T): Target[T]       = A.pure(x)
     def error[T](x: String): Target[T] = EitherT.fromEither(Left(x))
     def fromOption[T](x: Option[T], default: => String): Target[T] =

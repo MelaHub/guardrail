@@ -3,13 +3,13 @@ package generators
 
 import cats.~>
 import cats.arrow.FunctionK
-
 import AkkaHttpClientGenerator._
 import AkkaHttpServerGenerator._
-import CirceProtocolGenerator._
+import com.twilio.guardrail.generators.circe.protocol.CirceProtocolGenerator._
 import ScalaGenerator._
 import SwaggerGenerator._
 import AkkaHttpGenerator._
+import com.twilio.guardrail.generators.circe.protocol.ProtocolSupportTermInterp
 
 object AkkaHttp extends FunctionK[CodegenApplication, Target] {
   val interpSP: CodegenApplicationSP ~> Target                 = ProtocolSupportTermInterp or ServerTermInterp

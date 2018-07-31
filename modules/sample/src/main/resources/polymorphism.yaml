@@ -3,22 +3,16 @@ info:
   title: Parsing Error Sample
   version: 1.0.0
 paths:
-  /pet/{name}:
+  /pet:
     get:
-      parameters:
-        - $ref: '#/parameters/PetNamePathParam'
+      operationId: getPets
       responses:
         200:
           description: Return the details about the pet
           schema:
             $ref: '#/definitions/Pet'
 parameters:
-  PetNamePathParam:
-    name: name
-    description: Unique name of the pet
-    in: path
-    type: string
-    required: true
+
 definitions:
   Pet:
     type: object

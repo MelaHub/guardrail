@@ -3,13 +3,13 @@ package generators
 
 import cats.~>
 import cats.arrow.FunctionK
-
 import Http4sClientGenerator._
 import AkkaHttpServerGenerator._
 import Http4sGenerator._
-import CirceProtocolGenerator._
+import com.twilio.guardrail.generators.circe.protocol.CirceProtocolGenerator._
 import ScalaGenerator._
 import SwaggerGenerator._
+import com.twilio.guardrail.generators.circe.protocol.ProtocolSupportTermInterp
 
 object Http4s extends FunctionK[CodegenApplication, Target] {
   val interpSP: CodegenApplicationSP ~> Target                 = ProtocolSupportTermInterp or ServerTermInterp
